@@ -15,6 +15,8 @@ const token = "660c38115eea2660c38115eea6"
 
 // тут не будет ручного ввода, сделано для теста
 func main() {
+	Init()
+
 	for {
 		fmt.Print("Введите команду (move, collect, reset, rounds, quit): ")
 		reader := bufio.NewReader(os.Stdin)
@@ -53,7 +55,7 @@ func moveToNextPlanet() {
 	fmt.Println(universeData)
 
 	request := TravelRequest{
-		Planets: []string{universeData.Universe[0][1].(string), universeData.Universe[1][1].(string), universeData.Universe[2][1].(string)},
+		Planets: []string{universeData.Universe[14][1].(string)},
 	}
 
 	response, err := sendTravelRequest(request)
@@ -62,6 +64,8 @@ func moveToNextPlanet() {
 		return
 	}
 	fmt.Printf("Расход топлива: %d\n", response.FuelDiff)
+	fmt.Printf("Мусор на планете: %v\n", response.PlanetGarbage)
+	MyShip.AvalibleGarbage = response.PlanetGarbage
 }
 
 // тут будет реализован механизм для сборки
@@ -71,20 +75,22 @@ func collectGarbage() {
 		fmt.Println("Ошибка получения данных о вселенной:", err)
 		return
 	}
-	fmt.Println(universeData)
+	fmt.Println(universeData.Ship, "\n\n", universeData.Universe)
+
+	collectedGarb := MyShip.Collect()
+
 	request := CollectRequest{
-		Garbage: map[string][][]int{
-			"Garbage1": {{0, 0}, {0, 1}, {1, 1}},
-			"Garbage2": {{2, 2}, {2, 3}, {3, 3}},
-		},
+		Garbage: collectedGarb,
 	}
+
+	fmt.Printf("Я прошу забрать: %v\n", collectedGarb)
 
 	response, err := sendCollectRequest(request)
 	if err != nil {
 		fmt.Println("Ошибка отправки запроса на сбор мусора:", err)
 		return
 	}
-	fmt.Println(response)
+	fmt.Println(response.Garbage, response.Leaved)
 }
 
 func getUniverseData() (UniverseResponse, error) {
@@ -227,4 +233,13 @@ func getRoundsData() (RoundsResponse, error) {
 	}
 
 	return response, nil
+}
+
+func Init() {
+	universeData, err := getUniverseData()
+	if err != nil {
+		fmt.Println("Ошибка получения данных о вселенной:", err)
+		return
+	}
+	MyShip = NewShipBasket(universeData.Ship.CapacityX, universeData.Ship.CapacityY)
 }
